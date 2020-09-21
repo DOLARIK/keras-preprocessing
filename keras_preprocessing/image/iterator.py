@@ -233,7 +233,7 @@ class BatchFromFilesMixin():
             # but not PIL images.
             if hasattr(img, 'close'):
                 img.close()
-            if self.image_data_generator:
+            if self.image_data_generator and self.subset != 'validation':
                 params = self.image_data_generator.get_random_transform(x.shape)
                 x = self.image_data_generator.apply_transform(x, params)
                 x = self.image_data_generator.standardize(x)
