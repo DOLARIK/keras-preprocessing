@@ -11,7 +11,8 @@ from six.moves import range
 import numpy as np
 
 from .iterator import BatchFromFilesMixin, Iterator
-from .utils import _list_valid_filenames_in_directory
+from .utils import (_list_valid_filenames_in_directory,
+                    _make_balance_config)
 
 
 class DirectoryIterator(BatchFromFilesMixin, Iterator):
@@ -25,6 +26,7 @@ class DirectoryIterator(BatchFromFilesMixin, Iterator):
             via the `classes` argument.
         image_data_generator: Instance of `ImageDataGenerator`
             to use for random transformations and normalization.
+        balance: Boolean, will handle data imbalance if set to True.
         target_size: tuple of integers, dimensions to resize input images to.
         color_mode: One of `"rgb"`, `"rgba"`, `"grayscale"`.
             Color mode to read images.
@@ -76,6 +78,7 @@ class DirectoryIterator(BatchFromFilesMixin, Iterator):
     def __init__(self,
                  directory,
                  image_data_generator,
+                 balance = False,
                  target_size=(256, 256),
                  color_mode='rgb',
                  classes=None,
@@ -101,6 +104,13 @@ class DirectoryIterator(BatchFromFilesMixin, Iterator):
                                                             subset,
                                                             interpolation)
         self.directory = directory
+
+        if balance and subset != 'validation':
+            self._balance_config = _make_balance_config(directory, 
+                image_data_generator._validation_split)
+        else:
+            self._balance_config = None
+
         self.classes = classes
         if class_mode not in self.allowed_class_modes:
             raise ValueError('Invalid class_mode: {}; expected one of: {}'
@@ -129,7 +139,8 @@ class DirectoryIterator(BatchFromFilesMixin, Iterator):
             results.append(
                 pool.apply_async(_list_valid_filenames_in_directory,
                                  (dirpath, self.white_list_formats, self.split,
-                                  self.class_indices, follow_links)))
+                                  self.class_indices, follow_links,
+                                  self._balance_config)))
         classes_list = []
         for res in results:
             classes, filenames = res.get()
